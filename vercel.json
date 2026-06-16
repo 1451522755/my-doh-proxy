@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/doh-proxy",
-      "destination": "https://cloudflare-dns.com"
+      "destination": "https://dns.google"
     }
   ]
 }

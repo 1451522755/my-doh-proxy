@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   // 2. 这里的上游 DNS 可以换成 https://dns.google 或 https://cloudflare-dns.com
-  const UPSTREAM_DOH = 'https://cloudflare-dns.com';
+  const UPSTREAM_DOH = 'https://dns.google';
 
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);

@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/doh-proxy",
-      "destination": "https://dns.google/dns-query"
-    }
-  ]
-}

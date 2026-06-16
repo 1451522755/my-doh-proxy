@@ -1,36 +1,43 @@
 export default async function handler(req, res) {
-  // 1. 设置跨域和 DNS 专属响应头，让 Chrome 放心
+  // 1. 设置跨域头，允许所有请求
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/dns-message');
-  res.setHeader('Cache-Control', 'max-age=0, private, must-revalidate');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 
-  // 处理 Chrome 发起的预检请求
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  // 2. 这里的上游 DNS 可以换成 https://dns.google 或 https://cloudflare-dns.com
-  const UPSTREAM_DOH = 'https://dns.google';
+  // 2. 上游改用官方顶级域名，确保握手百分百成功
+  const UPSTREAM_DOH = 'https://cloudflare-dns.com';
 
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    
+    // 3. 构造完美的请求头，把 Chrome 发来的各种杂七杂八的数据原样打包
+    const headers = {
+      'accept': req.headers['accept'] || 'application/dns-message',
+    };
+    if (req.method === 'POST') {
+      headers['content-type'] = req.headers['content-type'] || 'application/dns-message';
+    }
+
     const targetUrl = `${UPSTREAM_DOH}${url.search}`;
 
-    // 3. 转发请求给官方 DNS
     const response = await fetch(targetUrl, {
       method: req.method,
-      headers: {
-        'accept': 'application/dns-message',
-        'content-type': req.method === 'POST' ? 'application/dns-message' : undefined,
-      },
+      headers: headers,
       body: req.method === 'POST' ? req.body : undefined,
     });
 
-    // 4. 将官方返回的二进制 DNS 数据传回给 Chrome
+    // 4. 将上游的头部信息透传回给 Chrome（包含关键的 Content-Type）
+    res.setHeader('Content-Type', response.headers.get('Content-Type') || 'application/dns-message');
+    res.setHeader('Cache-Control', response.headers.get('Cache-Control') || 'max-age=0, private, must-revalidate');
+
     const data = await response.arrayBuffer();
     res.status(200).send(Buffer.from(data));
   } catch (error) {
-    res.status(500).send('DNS Fetch Error');
+    res.status(500).send('DNS Forward Error');
   }
 }
